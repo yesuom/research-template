@@ -503,3 +503,129 @@ experiment/*.yaml
 ```
 
 正常情况下，开发一个新的数据集、模型、logger 或实验时，不应该修改 `src/train.py`。
+
+---
+
+## Pre-Experiment Checklist
+
+正式开始跑实验前，逐项检查以下内容。
+
+### Environment
+
+- [ ] 当前 Python / Conda 环境正确
+- [ ] 项目依赖已安装完整
+- [ ] PyTorch 能正确识别 GPU
+- [ ] CUDA / GPU 状态正常
+
+### Paths
+
+- [ ] `RESEARCH_DATA_DIR` 已指向正确的数据盘
+- [ ] `RESEARCH_LOG_DIR` 已指向空间充足的实验盘
+- [ ] 当前项目的 `.env` 已正确配置
+- [ ] `.env` 不会被提交到 Git
+- [ ] 实际 `paths.data_dir` 与 `paths.log_dir` 已确认
+
+### Data
+
+- [ ] `configs/data/<dataset>.yaml` 使用正确的数据集
+- [ ] train / val / test 划分正确
+- [ ] 数据增强只应用在训练集
+- [ ] `batch_size` 设置正确
+- [ ] `num_workers` 设置合理
+
+### Model
+
+- [ ] `configs/model/<model>.yaml` 使用正确的模型
+- [ ] 模型输入 / 输出维度正确
+- [ ] `num_classes` 正确
+- [ ] optimizer 正确
+- [ ] learning rate 正确
+- [ ] weight decay 正确
+- [ ] scheduler 配置正确
+
+### Experiment
+
+- [ ] 使用正确的 `configs/experiment/<experiment>.yaml`
+- [ ] `seed` 已固定
+- [ ] `max_epochs` 正确
+- [ ] trainer 使用正确的 accelerator / devices
+- [ ] 正式实验的重要参数已经写入 experiment config，而不是只存在于命令行中
+- [ ] experiment 名称能够清楚描述这次实验
+
+### SwanLab
+
+- [ ] experiment 中已启用 SwanLab
+
+```yaml
+defaults:
+  - override /logger: swanlab
+```
+
+- [ ] SwanLab `project` 正确
+- [ ] SwanLab `experiment_name` 正确
+- [ ] `train/loss`、`val/loss` 和主要 metrics 都会被记录
+- [ ] 不同实验的命名不会混淆
+
+### Checkpoint
+
+- [ ] checkpoint 实际保存目录位于大容量磁盘
+- [ ] `monitor` 指标正确，例如 `val/acc` 或 `val/loss`
+- [ ] `mode` 与监控指标匹配：accuracy 等通常使用 `max`，loss 通常使用 `min`
+- [ ] `save_last` / best checkpoint 策略符合当前实验需要
+- [ ] 测试阶段会加载预期的 best checkpoint
+
+### Smoke Test
+
+正式长时间训练前，先跑一个短测试：
+
+```bash
+python src/train.py \
+  experiment=<experiment_name> \
+  trainer.max_epochs=1
+```
+
+确认：
+
+- [ ] train 能运行
+- [ ] validation 能运行
+- [ ] checkpoint 能正常保存
+- [ ] best checkpoint 能重新加载
+- [ ] test 能运行
+- [ ] SwanLab 能看到训练和验证曲线
+- [ ] 数据目录和实验输出目录位置正确
+
+### Reproducibility
+
+- [ ] 当前 experiment config 已保存
+- [ ] 所有重要超参数都能从 Hydra config 中恢复
+- [ ] 当前代码已经 commit
+- [ ] `git status` 没有遗漏需要提交的重要修改
+- [ ] 正式实验对应的 Git commit 可以被找到
+
+正式运行前建议执行：
+
+```bash
+git status
+git log -1 --oneline
+```
+
+### Final Check
+
+开始正式训练前，最后确认：
+
+```text
+[ ] 数据正确
+[ ] 模型正确
+[ ] 超参数正确
+[ ] 随机种子正确
+[ ] SwanLab project / experiment_name 正确
+[ ] checkpoint 路径正确
+[ ] 代码已经 commit
+[ ] smoke test 已通过
+```
+
+全部确认后，再运行正式实验：
+
+```bash
+python src/train.py experiment=<experiment_name>
+```
